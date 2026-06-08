@@ -482,7 +482,37 @@ function importJSON() {
 }
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js');
+  navigator.serviceWorker.register('/sw.js').then(reg => {
+    reg.addEventListener('updatefound', () => {
+      const newWorker = reg.installing;
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          showUpdateToast(newWorker);
+        }
+      });
+    });
+  });
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
+  });
+}
+
+function showUpdateToast(worker) {
+  const toast = document.createElement('div');
+  toast.className = 'update-toast';
+  toast.innerHTML = `
+    <span class="toast-text">New version available</span>
+    <button class="toast-btn" onclick="applyUpdate()">Update</button>
+  `;
+  document.body.appendChild(toast);
+  window._pendingWorker = worker;
+}
+
+function applyUpdate() {
+  if (window._pendingWorker) {
+    window._pendingWorker.postMessage('skipWaiting');
+  }
 }
 
 render();
