@@ -838,6 +838,22 @@ header h1 {
   display: none !important;
 }
 
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 32px 16px 16px;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  font-weight: 500;
+  animation: fadeIn 0.6s ease 0.4s both;
+}
+
+.footer span {
+  color: #ff4757;
+  display: inline-block;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
 /* Tooltip for mobile delete */
 @media (hover: none) {
   .expense-delete {
