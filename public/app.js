@@ -1,13 +1,13 @@
 const CATEGORIES = [
-  { id: 'food', label: 'Food', color: '#ff6b6b' },
-  { id: 'transport', label: 'Transport', color: '#feca57' },
-  { id: 'shopping', label: 'Shopping', color: '#48dbfb' },
-  { id: 'bills', label: 'Bills', color: '#ff9ff3' },
-  { id: 'health', label: 'Health', color: '#2ed573' },
-  { id: 'entertainment', label: 'Fun', color: '#f368e0' },
-  { id: 'education', label: 'Education', color: '#54a0ff' },
-  { id: 'travel', label: 'Travel', color: '#ffa502' },
-  { id: 'other', label: 'Other', color: '#a4a4a4' },
+  { id: 'food', label: 'Food', color: '#ff6b6b', icon: '🍕' },
+  { id: 'transport', label: 'Transport', color: '#feca57', icon: '🚕' },
+  { id: 'shopping', label: 'Shopping', color: '#48dbfb', icon: '🛍️' },
+  { id: 'bills', label: 'Bills', color: '#ff9ff3', icon: '📄' },
+  { id: 'health', label: 'Health', color: '#2ed573', icon: '💊' },
+  { id: 'entertainment', label: 'Fun', color: '#f368e0', icon: '🎮' },
+  { id: 'education', label: 'Education', color: '#54a0ff', icon: '📚' },
+  { id: 'travel', label: 'Travel', color: '#ffa502', icon: '✈️' },
+  { id: 'other', label: 'Other', color: '#a4a4a4', icon: '📦' },
 ];
 
 const STORAGE_KEY = 'expense_tracker_data';
@@ -26,7 +26,7 @@ function genId() {
 }
 
 function formatCurrency(n) {
-  return '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  return '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
 function getMonthKey(date) {
@@ -35,7 +35,7 @@ function getMonthKey(date) {
 
 function formatMonth(key) {
   const [y, m] = key.split('-');
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   return `${months[parseInt(m) - 1]} ${y}`;
 }
 
@@ -69,12 +69,29 @@ function getCategoryBreakdown() {
     .sort((a, b) => b.amount - a.amount);
 }
 
+function getDailyBreakdown() {
+  const filtered = getFilteredExpenses();
+  const [y, m] = currentMonth.split('-').map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const daily = new Array(daysInMonth).fill(0);
+  filtered.forEach(e => {
+    const day = new Date(e.date).getDate();
+    daily[day - 1] += e.amount;
+  });
+  return daily;
+}
+
+function getTransactionCount() {
+  return getFilteredExpenses().length;
+}
+
 function render() {
   const app = document.getElementById('app');
   const filtered = getFilteredExpenses();
   const monthTotal = getTotalForMonth();
   const todayTotal = getTodayTotal();
   const breakdown = getCategoryBreakdown();
+  const txCount = getTransactionCount();
 
   app.innerHTML = `
     <header>
@@ -82,12 +99,16 @@ function render() {
       <div class="header-actions">
         <button class="btn-icon" onclick="exportJSON()" title="Export JSON">
           <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="7,10 12,15 17,10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
           </svg>
         </button>
         <button class="btn-icon" onclick="importJSON()" title="Import JSON">
           <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="17,8 12,3 7,8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
           </svg>
         </button>
       </div>
@@ -95,87 +116,141 @@ function render() {
 
     <div class="month-nav">
       <button onclick="changeMonth(-1)">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
       <span>${formatMonth(currentMonth)}</span>
       <button onclick="changeMonth(1)">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
       </button>
     </div>
 
     <div class="summary-row">
       <div class="summary-card">
+        <div class="icon-wrapper">
+          <svg width="18" height="18" fill="none" stroke="#6c5ce7" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="2" y="4" width="20" height="16" rx="2"/>
+            <path d="M2 10h20"/>
+          </svg>
+        </div>
         <div class="label">This Month</div>
         <div class="amount">${formatCurrency(monthTotal)}</div>
       </div>
       <div class="summary-card">
+        <div class="icon-wrapper">
+          <svg width="18" height="18" fill="none" stroke="#00d2d3" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 6v6l4 2"/>
+          </svg>
+        </div>
         <div class="label">Today</div>
         <div class="amount">${formatCurrency(todayTotal)}</div>
       </div>
     </div>
 
     <div class="tabs">
-      <button class="tab ${currentTab === 'list' ? 'active' : ''}" onclick="switchTab('list')">Transactions</button>
-      <button class="tab ${currentTab === 'charts' ? 'active' : ''}" onclick="switchTab('charts')">Charts</button>
+      <button class="tab ${currentTab === 'list' ? 'active' : ''}" onclick="switchTab('list')">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>
+        </svg>
+        ${txCount} Transactions
+      </button>
+      <button class="tab ${currentTab === 'charts' ? 'active' : ''}" onclick="switchTab('charts')">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M18 20V10M12 20V4M6 20v-6"/>
+        </svg>
+        Charts
+      </button>
     </div>
 
     <div id="tab-content">
       ${currentTab === 'list' ? renderList(filtered) : renderCharts(breakdown, monthTotal)}
     </div>
 
-    <button class="fab" onclick="openModal()">+</button>
+    <button class="fab" onclick="openModal()">
+      <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+    </button>
   `;
 }
 
 function renderList(filtered) {
   if (filtered.length === 0) {
-    return `<div class="empty-state"><div class="icon">&#128203;</div><p>No expenses this month</p></div>`;
+    return `<div class="empty-state">
+      <div class="icon">💸</div>
+      <p>No expenses this month</p>
+      <p class="hint">Tap + to add your first expense</p>
+    </div>`;
   }
-  return `<div class="expense-list">
-    ${filtered.map(e => {
-      const cat = CATEGORIES.find(c => c.id === e.category) || CATEGORIES[8];
-      return `<div class="expense-item">
-        <div class="expense-cat-dot" style="background:${cat.color}"></div>
-        <div class="expense-info">
-          <div class="name">${esc(e.name)}</div>
-          <div class="meta">${cat.label} &middot; ${formatDate(e.date)}</div>
+
+  let lastDate = '';
+  let html = '<div class="expense-list">';
+
+  filtered.forEach((e, i) => {
+    const cat = CATEGORIES.find(c => c.id === e.category) || CATEGORIES[8];
+    const delay = Math.min(i * 0.05, 0.5);
+
+    html += `<div class="expense-item" style="animation-delay:${delay}s">
+      <div class="expense-cat-icon" style="background:${cat.color}20">
+        ${cat.icon}
+      </div>
+      <div class="expense-info">
+        <div class="name">${esc(e.name)}</div>
+        <div class="meta">
+          <span class="cat-badge">${cat.label}</span>
+          ${formatDate(e.date)}
         </div>
-        <div class="expense-amount">${formatCurrency(e.amount)}</div>
-        <button class="expense-delete" onclick="deleteExpense('${e.id}')">
-          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        </button>
-      </div>`;
-    }).join('')}
-  </div>`;
+      </div>
+      <div class="expense-amount">- ${formatCurrency(e.amount)}</div>
+      <button class="expense-delete" onclick="deleteExpense('${e.id}')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>`;
+  });
+
+  html += '</div>';
+  return html;
 }
 
 function renderCharts(breakdown, total) {
   if (breakdown.length === 0) {
-    return `<div class="empty-state"><div class="icon">&#128202;</div><p>Add expenses to see charts</p></div>`;
+    return `<div class="empty-state">
+      <div class="icon">📊</div>
+      <p>Add expenses to see charts</p>
+      <p class="hint">Visual breakdown appears here</p>
+    </div>`;
   }
+
   const maxAmount = Math.max(...breakdown.map(b => b.amount));
+  const daily = getDailyBreakdown();
+  const maxDaily = Math.max(...daily, 1);
 
   let donutSegments = '';
   let offset = 0;
   breakdown.forEach(b => {
     const pct = (b.amount / total) * 100;
     const dashArray = `${pct} ${100 - pct}`;
-    donutSegments += `<circle cx="50%" cy="50%" r="15.9" fill="none" stroke="${b.color}" stroke-width="6"
-      stroke-dasharray="${dashArray}" stroke-dashoffset="${-offset}" transform="rotate(-90 21 21)"/>`;
+    donutSegments += `<circle cx="50%" cy="50%" r="15.9" fill="none" stroke="${b.color}" stroke-width="5"
+      stroke-dasharray="${dashArray}" stroke-dashoffset="${-offset}" transform="rotate(-90 21 21)"
+      style="transition: stroke-dasharray 0.6s ease"/>`;
     offset += pct;
   });
 
   return `
-    <div class="chart-container">
-      <h3>Category Breakdown</h3>
+    <div class="chart-container" style="animation-delay:0s">
+      <h3>
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0110 10"/></svg>
+        Category Split
+      </h3>
       <div class="donut-chart">
         <svg class="donut-svg" viewBox="0 0 42 42">
+          <circle cx="21" cy="21" r="15.9" fill="none" stroke="${'var(--surface-2)'}" stroke-width="5"/>
           ${donutSegments}
         </svg>
         <div class="donut-legend">
-          ${breakdown.slice(0, 5).map(b => `
-            <div class="legend-item">
-              <div class="legend-dot" style="background:${b.color}"></div>
+          ${breakdown.slice(0, 6).map((b, i) => `
+            <div class="legend-item" style="animation-delay:${i * 0.1}s">
+              <span class="legend-icon">${b.icon}</span>
               <span class="legend-label">${b.label}</span>
               <span class="legend-value">${Math.round(b.amount / total * 100)}%</span>
             </div>
@@ -183,11 +258,37 @@ function renderCharts(breakdown, total) {
         </div>
       </div>
     </div>
-    <div class="chart-container">
-      <h3>Spending by Category</h3>
+
+    <div class="chart-container" style="animation-delay:0.1s">
+      <h3>
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
+        Daily Spending
+      </h3>
+      <div class="daily-chart">
+        ${daily.map((d, i) => `
+          <div class="daily-bar" title="Day ${i + 1}: ${formatCurrency(d)}">
+            <div class="fill" style="height:${d > 0 ? Math.max((d / maxDaily) * 100, 4) : 0}%"></div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="daily-labels">
+        <span>1</span>
+        <span>${Math.ceil(daily.length / 4)}</span>
+        <span>${Math.ceil(daily.length / 2)}</span>
+        <span>${Math.ceil(daily.length * 3 / 4)}</span>
+        <span>${daily.length}</span>
+      </div>
+    </div>
+
+    <div class="chart-container" style="animation-delay:0.2s">
+      <h3>
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+        Spending by Category
+      </h3>
       <div class="chart-bar-group">
-        ${breakdown.map(b => `
-          <div class="chart-bar-item">
+        ${breakdown.map((b, i) => `
+          <div class="chart-bar-item" style="animation-delay:${i * 0.1}s">
+            <span class="chart-bar-icon">${b.icon}</span>
             <span class="chart-bar-label">${b.label}</span>
             <div class="chart-bar-track">
               <div class="chart-bar-fill" style="width:${(b.amount / maxAmount) * 100}%;background:${b.color}"></div>
@@ -202,6 +303,12 @@ function renderCharts(breakdown, total) {
 
 function formatDate(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  if (d.toDateString() === today.toDateString()) return 'Today';
+  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
@@ -225,13 +332,20 @@ function changeMonth(dir) {
 
 function openModal() {
   const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay open';
+  overlay.className = 'modal-overlay';
   overlay.id = 'modal';
   overlay.innerHTML = `
     <div class="modal">
-      <h2>Add Expense</h2>
+      <div class="modal-handle"></div>
+      <h2>
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 8v8M8 12h8"/>
+        </svg>
+        Add Expense
+      </h2>
       <div class="form-group">
-        <label>Amount</label>
+        <label>Amount (₹)</label>
         <input type="number" id="inp-amount" placeholder="0" inputmode="decimal" autofocus>
       </div>
       <div class="form-group">
@@ -241,28 +355,34 @@ function openModal() {
       <div class="form-group">
         <label>Category</label>
         <div class="category-grid">
-          ${CATEGORIES.map(c => `<div class="category-chip" data-cat="${c.id}" onclick="selectCat('${c.id}')">${c.label}</div>`).join('')}
+          ${CATEGORIES.map(c => `<div class="category-chip" data-cat="${c.id}" onclick="selectCat('${c.id}')">
+            <span class="chip-icon">${c.icon}</span>
+            ${c.label}
+          </div>`).join('')}
         </div>
       </div>
       <div class="form-group">
         <label>Date</label>
         <input type="date" id="inp-date" value="${new Date().toISOString().split('T')[0]}">
       </div>
-      <button class="btn-primary" onclick="addExpense()">Add Expense</button>
+      <button class="btn-primary" onclick="addExpense()">
+        Add Expense
+      </button>
     </div>
   `;
   document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('open'));
   overlay.addEventListener('click', e => {
     if (e.target === overlay) closeModal();
   });
-  setTimeout(() => document.getElementById('inp-amount').focus(), 100);
+  setTimeout(() => document.getElementById('inp-amount').focus(), 300);
 }
 
 function closeModal() {
   const m = document.getElementById('modal');
   if (m) {
     m.classList.remove('open');
-    setTimeout(() => m.remove(), 300);
+    setTimeout(() => m.remove(), 350);
   }
 }
 
@@ -279,9 +399,19 @@ function addExpense() {
   const name = document.getElementById('inp-name').value.trim();
   const date = document.getElementById('inp-date').value;
 
-  if (!amount || amount <= 0) return;
-  if (!name) return;
-  if (!selectedCat) return;
+  if (!amount || amount <= 0) {
+    document.getElementById('inp-amount').style.borderColor = '#ff4757';
+    return;
+  }
+  if (!name) {
+    document.getElementById('inp-name').style.borderColor = '#ff4757';
+    return;
+  }
+  if (!selectedCat) {
+    document.querySelector('.category-grid').style.outline = '2px solid #ff4757';
+    document.querySelector('.category-grid').style.borderRadius = '12px';
+    return;
+  }
 
   expenses.push({
     id: genId(),
@@ -299,9 +429,15 @@ function addExpense() {
 }
 
 function deleteExpense(id) {
-  expenses = expenses.filter(e => e.id !== id);
-  saveExpenses(expenses);
-  render();
+  const item = document.querySelector(`[onclick="deleteExpense('${id}')"]`).closest('.expense-item');
+  item.style.transform = 'translateX(100%)';
+  item.style.opacity = '0';
+  item.style.transition = 'all 0.3s ease';
+  setTimeout(() => {
+    expenses = expenses.filter(e => e.id !== id);
+    saveExpenses(expenses);
+    render();
+  }, 300);
 }
 
 function exportJSON() {
